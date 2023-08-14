@@ -83,27 +83,15 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     def list_objects(self):
         return bpy.data.objects.keys()
-        
+                            
     def delete_obj(self, obj_name):
         # Check if the object exists in the scene.
         if obj_name in bpy.data.objects:
-            # Deselect all objects.
-            bpy.ops.object.select_all(action='DESELECT')
-
             # Get the object.
             obj = bpy.data.objects[obj_name]
 
-            # Set the object as the active object.
-            bpy.context.view_layer.objects.active = obj
-
-            # Select the object.
-            obj.select_set(True)
-
-            # Create a new context with the object selected and active.
-            override = {'selected_objects': [obj], 'active_object': obj, 'object': obj}
-
-            # Delete the object using the new context.
-            bpy.ops.object.delete(override)
+            # Unlink the object from all scenes (this effectively deletes it).
+            bpy.data.objects.remove(obj)
 
             return f"Object {obj_name} deleted"
         else:
