@@ -9,62 +9,43 @@ import threading
 import json
 import urllib.parse as urlparse
 import bmesh
+import functools 
 
 HOST = "127.0.0.1"
 PORT = 8000
 
-"""
-# Request to list_objects from Blender
-curl -X PUT http://127.0.0.1:8000/list_objects \
--H 'Content-Type: application/json' \
--d '{"jsonrpc": "2.0", "method": "list_objects", "id": 1}'
+def export_gltf(obj_name, gltf_path):
+    # Check if the object exists in the scene.
+    if obj_name not in bpy.data.objects:
+        return f"Object {obj_name} does not exist"
 
-# Request to list_objects from Blender
-curl -X PUT http://127.0.0.1:8000/get_3d_conventions \
--H 'Content-Type: application/json' \
--d '{"jsonrpc": "2.0", "method": "get_3d_conventions", "id": 1}'
+    # Schedule the export operation to be run in the main thread
+    bpy.app.timers.register(functools.partial(_export_gltf_main_thread, obj_name, gltf_path))
 
-# Request to import_obj from Blender
-curl -X PUT http://127.0.0.1:8000/import_obj \
--H 'Content-Type: application/json' \
--d '{"jsonrpc": "2.0", "method": "import_obj", "params": ["/Users/ernest.lee/Downloads/untitled_rem_p0_10_quadrangulation.obj"], "id": 2}'
+    return "OK"
 
-# Request to delete_obj from Blender
-curl -X PUT http://127.0.0.1:8000/delete_obj \
--H 'Content-Type: application/json' \
--d '{"jsonrpc": "2.0", "method": "delete_obj", "params": ["untitled_rem_p0_10_quadrangulation"], "id": 3}'
+def _export_gltf_main_thread(obj_name, gltf_path):
+    # Deselect all objects
+    bpy.ops.object.select_all(action='DESELECT')
 
-# Another request to list_objects from Blender
-curl -X PUT http://127.0.0.1:8000/list_objects \
--H 'Content-Type: application/json' \
--d '{"jsonrpc": "2.0", "method": "list_objects", "id": 4}'
+    # Select the object
+    obj = bpy.data.objects[obj_name]
+    obj.select_set(True)
 
-# Batch request to list_objects, import_obj, delete_obj and list_objects again from Blender
-curl -X PUT http://127.0.0.1:8000/ \
--H 'Content-Type: application/json' \
--d '[
-  {"jsonrpc": "2.0", "method": "list_objects", "id": 1},
-  {"jsonrpc": "2.0", "method": "import_obj", "params": ["/Users/ernest.lee/Downloads/untitled_rem_p0_10_quadrangulation.obj"], "id": 2},
-  {"jsonrpc": "2.0", "method": "delete_obj", "params": ["untitled_rem_p0_10_quadrangulation"], "id": 3},
-  {"jsonrpc": "2.0", "method": "list_objects", "id": 4}
-]'
+    # Set the active object
+    bpy.context.view_layer.objects.active = obj
 
-# Create mesh from vertices
-curl -X PUT http://127.0.0.1:8000/create_mesh_from_vertices \
--H 'Content-Type: application/json' \
--d '{
-    "jsonrpc": "2.0",
-    "method": "create_mesh_from_vertices",
-    "params": [
-        [
-            {"x": 1.0, "y": 2.0, "z": 3.0},
-            {"x": 4.0, "y": 5.0, "z": 6.0},
-            {"x": 7.0, "y": 8.0, "z": 9.0}
-        ]
-    ],
-    "id": 5
-}'
-"""
+    # Try to export the object to a .gltf file.
+    try:
+        # Check if there is an active object
+        if bpy.context.view_layer.objects.active is not None:
+            # Override the context
+            override = {'selected_objects': [obj], 'active_object': obj, 'object': obj}
+            bpy.ops.export_scene.gltf(override, filepath=gltf_path)
+        else:
+            print(f"No active object to export")
+    except Exception as e:
+        print(f"Failed to export {obj_name} to {gltf_path}: {e}")
 
 class RequestHandler(BaseHTTPRequestHandler):
 
@@ -120,6 +101,12 @@ class RequestHandler(BaseHTTPRequestHandler):
         elif method == 'import_obj':
             result = self.import_obj(*params)
             response = self.success_response(result, id)
+        elif method == 'import_gltf':
+            result = self.import_gltf(*params)
+            response = self.success_response(result, id)
+        elif method == 'export_gltf':
+            result = export_gltf(*params)
+            response = self.success_response(result, id)
         elif method == 'get_3d_conventions':
             result = self.get_3d_conventions(*params)
             response = self.success_response(result, id)
@@ -136,6 +123,21 @@ class RequestHandler(BaseHTTPRequestHandler):
             response = self.error_response(-32601, f"Method not found: {method}", id)
 
         return response
+
+    def import_gltf(self, gltf_path):
+        import os
+
+        if not os.path.isfile(gltf_path):
+            return f"File {gltf_path} does not exist"
+
+        # Try to import the .gltf file.
+        try:
+            bpy.ops.import_scene.gltf(filepath=gltf_path)
+        except Exception as e:
+            return f"Failed to import {gltf_path}: {e}"
+
+        return "OK"
+
 
     def create_mesh_from_vertices(self, vertex_list):
         # Create a new mesh object and link it to the scene
@@ -181,7 +183,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         return {
             "view_rotation": tuple(view_rotation)
         }
-        
+
     def delete_obj(self, obj_name):
         # Check if the object exists in the scene.
         if obj_name in bpy.data.objects:
@@ -223,6 +225,5 @@ def server_start():
         print("Server started successfully.")
     except Exception as e:
         print(f"Failed to start server: {e}")
-
 
 server_start()

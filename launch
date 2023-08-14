@@ -1,3 +1,3 @@
 #!/bin/bash
 
-blender -b --python-console -P generative_engine.py
+blender -P generative_engine.py
