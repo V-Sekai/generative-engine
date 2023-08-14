@@ -19,6 +19,11 @@ curl -X PUT http://127.0.0.1:8000/list_objects \
 -H 'Content-Type: application/json' \
 -d '{"jsonrpc": "2.0", "method": "list_objects", "id": 1}'
 
+# Request to list_objects from Blender
+curl -X PUT http://127.0.0.1:8000/get_3d_conventions \
+-H 'Content-Type: application/json' \
+-d '{"jsonrpc": "2.0", "method": "get_3d_conventions", "id": 1}'
+
 # Request to import_obj from Blender
 curl -X PUT http://127.0.0.1:8000/import_obj \
 -H 'Content-Type: application/json' \
@@ -115,6 +120,9 @@ class RequestHandler(BaseHTTPRequestHandler):
         elif method == 'import_obj':
             result = self.import_obj(*params)
             response = self.success_response(result, id)
+        elif method == 'get_3d_conventions':
+            result = self.get_3d_conventions(*params)
+            response = self.success_response(result, id)
         elif method == 'delete_obj':
             result = self.delete_obj(*params)
             response = self.success_response(result, id)
@@ -164,7 +172,16 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     def list_objects(self):
         return bpy.data.objects.keys()
-                            
+                
+    def get_3d_conventions(self):
+        # Get the current 3D view space conventions
+        view3d_space = next(space for space in bpy.context.screen.areas if space.type == 'VIEW_3D').spaces[0]
+        view_rotation = view3d_space.region_3d.view_rotation
+
+        return {
+            "view_rotation": tuple(view_rotation)
+        }
+        
     def delete_obj(self, obj_name):
         # Check if the object exists in the scene.
         if obj_name in bpy.data.objects:
@@ -209,7 +226,3 @@ def server_start():
 
 
 server_start()
-
-# # Keep the main thread alive.
-# while True:
-#     pass
