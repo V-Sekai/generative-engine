@@ -72,7 +72,7 @@ http://127.0.0.1:8000
 curl -X PUT \
 -H "Content-Type: application/json" \
 -d '[ 
-    {"jsonrpc": "2.0", "method": "set_translation", "params": ["object_name1", [3, 0, 0]], "id": 7}
+    {"jsonrpc": "2.0", "method": "set_translation", "params": ["object_name1", [2, 0, 0]], "id": 7}
 ]' \
 http://127.0.0.1:8000
 
@@ -80,7 +80,7 @@ http://127.0.0.1:8000
 curl -X PUT \
 -H "Content-Type: application/json" \
 -d '[ 
-    {"jsonrpc": "2.0", "method": "set_translation", "params": ["object_name2", [-3, 0, 0]], "id": 8}
+    {"jsonrpc": "2.0", "method": "set_translation", "params": ["object_name2", [4, 0, 0]], "id": 8}
 ]' \
 http://127.0.0.1:8000
 
@@ -88,7 +88,23 @@ http://127.0.0.1:8000
 curl -X PUT \
 -H "Content-Type: application/json" \
 -d '[ 
-    {"jsonrpc": "2.0", "method": "set_translation", "params": ["object_name3", [0, 3, 0]], "id": 9}
+    {"jsonrpc": "2.0", "method": "set_translation", "params": ["object_name3", [6, 0, 0]], "id": 9}
+]' \
+http://127.0.0.1:8000
+
+# Set parent for Shape 2
+curl -X PUT \
+-H "Content-Type: application/json" \
+-d '[ 
+    {"jsonrpc": "2.0", "method": "set_parent", "params": ["object_name2", "object_name1"], "id": 11}
+]' \
+http://127.0.0.1:8000
+
+# Set parent for Shape 3
+curl -X PUT \
+-H "Content-Type: application/json" \
+-d '[ 
+    {"jsonrpc": "2.0", "method": "set_parent", "params": ["object_name3", "object_name2"], "id": 12}
 ]' \
 http://127.0.0.1:8000
 

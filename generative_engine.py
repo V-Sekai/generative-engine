@@ -14,6 +14,42 @@ import functools
 HOST = "127.0.0.1"
 PORT = 8000
 
+def set_parent(child_name, parent_name):
+    if child_name in bpy.data.objects and parent_name in bpy.data.objects:
+        bpy.app.timers.register(functools.partial(_set_parent_main_thread, child_name, parent_name))
+        return f"Set {parent_name} as parent of {child_name}"
+    else:
+        return "Child or Parent object does not exist"
+
+def _set_parent_main_thread(child_name, parent_name):
+    # Check if the child and parent objects exist in the scene.
+    if child_name not in bpy.data.objects or parent_name not in bpy.data.objects:
+        print(f"Child or Parent object does not exist")
+        return
+
+    try:
+        # Deselect all objects
+        bpy.ops.object.select_all(action='DESELECT')
+
+        # Get the child and parent objects
+        child = bpy.data.objects[child_name]
+        parent = bpy.data.objects[parent_name]
+
+        # Select the child object and make it the active object
+        child.select_set(True)
+        bpy.context.view_layer.objects.active = child
+
+        # Select the parent object
+        parent.select_set(True)
+
+        # Set the parent of the active object
+        override = {'selected_objects': [child, parent], 'active_object': child, 'object': child}
+        bpy.ops.object.parent_set(override, type='OBJECT')
+
+        print(f"Set {parent_name} as parent of {child_name}")
+    except Exception as e:
+        print(f"Failed to set {parent_name} as parent of {child_name}: {e}")
+
 def export_gltf(obj_name, gltf_path):
     # Check if the object exists in the scene.
     if obj_name not in bpy.data.objects:
@@ -226,6 +262,13 @@ class RequestHandler(BaseHTTPRequestHandler):
         elif method == 'delete_obj':
             result = self.delete_obj(*params)
             response = self.success_response(result, id)
+        elif method == 'set_parent':
+            if 'params' in request and len(request['params']) >= 2:
+                child_name, parent_name = request['params']
+                result = set_parent(child_name, parent_name)
+                response = self.success_response(result, id)
+            else:
+                response = self.error_response("Insufficient parameters for 'set_parent'", id)
         elif method == 'set_translation':
             if 'params' in request and len(request['params']) >= 2:
                 object_name, translation = request['params']
@@ -269,21 +312,6 @@ class RequestHandler(BaseHTTPRequestHandler):
                 response = self.success_response(result, id)
             else:
                 response = self.error_response("Insufficient parameters for 'add_faces'", id)
-        elif method == 'set_local_transform':
-            if 'params' in request and len(request['params']) >= 2:
-                object_name, transform_matrix = request['params']
-                result = batch_ops.set_local_transform(object_name, transform_matrix)
-                response = self.success_response(result, id)
-            else:
-                response = self.error_response("Insufficient parameters for 'set_local_transform'", id)
-
-        elif method == 'set_global_transform':
-            if 'params' in request and len(request['params']) >= 2:
-                object_name, transform_matrix = request['params']
-                result = batch_ops.set_global_transform(object_name, transform_matrix)
-                response = self.success_response(result, id)
-            else:
-                response = self.error_response("Insufficient parameters for 'set_global_transform'", id)
         # elif method == 'find_edges':
         #     result = batch_ops.find_edges(params[1:])  # Skip the first parameter (object name)
         #     response = self.success_response(result, id)
