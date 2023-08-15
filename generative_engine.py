@@ -10,18 +10,19 @@ import json
 import urllib.parse as urlparse
 import bmesh
 import functools 
+from typing import List, Tuple, Union, Optional, Dict, Any
 
 HOST = "127.0.0.1"
 PORT = 8000
 
-def set_parent(child_name, parent_name):
+def set_parent(child_name: str, parent_name: str) -> str:
     if child_name in bpy.data.objects and parent_name in bpy.data.objects:
         bpy.app.timers.register(functools.partial(_set_parent_main_thread, child_name, parent_name))
         return f"Set {parent_name} as parent of {child_name}"
     else:
         return "Child or Parent object does not exist"
 
-def _set_parent_main_thread(child_name, parent_name):
+def _set_parent_main_thread(child_name: str, parent_name: str) -> None:
     # Check if the child and parent objects exist in the scene.
     if child_name not in bpy.data.objects or parent_name not in bpy.data.objects:
         print(f"Child or Parent object does not exist")
@@ -50,7 +51,7 @@ def _set_parent_main_thread(child_name, parent_name):
     except Exception as e:
         print(f"Failed to set {parent_name} as parent of {child_name}: {e}")
 
-def export_gltf(obj_name, gltf_path):
+def export_gltf(obj_name: str, gltf_path: str) -> str:
     # Check if the object exists in the scene.
     if obj_name not in bpy.data.objects:
         return f"Object {obj_name} does not exist"
@@ -60,7 +61,7 @@ def export_gltf(obj_name, gltf_path):
 
     return "OK"
 
-def _export_gltf_main_thread(obj_name, gltf_path):
+def _export_gltf_main_thread(obj_name: str, gltf_path: str) -> None:
     # Deselect all objects
     bpy.ops.object.select_all(action='DESELECT')
 
@@ -84,7 +85,7 @@ def _export_gltf_main_thread(obj_name, gltf_path):
         print(f"Failed to export {obj_name} to {gltf_path}: {e}")
 
 class BatchMeshOperations:
-    def __init__(self, object_name):
+    def __init__(self, object_name: str):
         if object_name in bpy.data.objects:
             self.obj = bpy.data.objects[object_name]
         else:
@@ -97,20 +98,20 @@ class BatchMeshOperations:
         self.bm = bmesh.new()
         self.bm.from_mesh(self.mesh)
 
-    def create_empty_mesh(self, mesh_name, object_name):
+    def create_empty_mesh(self, mesh_name: str, object_name: str) -> str:
         self.mesh = bpy.data.meshes.new(mesh_name)
         self.obj = bpy.data.objects.new(object_name, self.mesh)
         bpy.context.collection.objects.link(self.obj)
         return self.obj.name
 
-    def add_vertices(self, object_name, mesh_name, vertices):
+    def add_vertices(self, object_name: str, mesh_name: str, vertices: List[Tuple[float, float, float]]) -> str:
         self.__init__(object_name)
         for x, y, z in vertices:
             self.bm.verts.new((x, y, z))
         self.bm.to_mesh(self.mesh)
         return "Vertices added"
 
-    def add_faces(self, object_name, mesh_name, faces):
+    def add_faces(self, object_name: str, mesh_name: str, faces: List[List[int]]) -> str:
         self.__init__(object_name)
         self.bm.verts.ensure_lookup_table()  # Update the internal index table
         for vertices in faces:
@@ -121,7 +122,7 @@ class BatchMeshOperations:
         self.bm.to_mesh(self.mesh)
         return "Faces added"
 
-    def set_translation(self, object_name, translation):
+    def set_translation(self, object_name: str, translation: Tuple[float, float, float]) -> str:
         if object_name in bpy.data.objects:
             obj = bpy.data.objects[object_name]
             obj.location = translation
@@ -129,7 +130,7 @@ class BatchMeshOperations:
         else:
             return f"Object {object_name} does not exist"
 
-    def set_rotation(self, object_name, rotation):
+    def set_rotation(self, object_name: str, rotation: Tuple[float, float, float]) -> str:
         if object_name in bpy.data.objects:
             obj = bpy.data.objects[object_name]
             obj.rotation_euler = rotation
@@ -137,7 +138,7 @@ class BatchMeshOperations:
         else:
             return f"Object {object_name} does not exist"
 
-    def set_scale(self, object_name, scale):
+    def set_scale(self, object_name: str, scale: Tuple[float, float, float]) -> str:
         if object_name in bpy.data.objects:
             obj = bpy.data.objects[object_name]
             obj.scale = scale
@@ -145,65 +146,65 @@ class BatchMeshOperations:
         else:
             return f"Object {object_name} does not exist"
 
-    # def find_edges(self, edges):
-    #     found_edges = []
-    #     for v1, v2 in edges:
-    #         edge = self.bm.edges.get((self.bm.verts[v1], self.bm.verts[v2]))
-    #         if edge:
-    #             found_edges.append(edge)
-    #     return f"Edges found: {found_edges}"
+    def find_edges(self, edges: List[Tuple[int, int]]) -> str:
+        found_edges = []
+        for v1, v2 in edges:
+            edge = self.bm.edges.get((self.bm.verts[v1], self.bm.verts[v2]))
+            if edge:
+                found_edges.append(edge)
+        return f"Edges found: {found_edges}"
 
-    # def remove_edges(self, edges):
-    #     for edge in edges:
-    #         self.bm.edges.remove(self.bm.edges[edge])
-    #     return "Edges removed"
+    def remove_edges(self, edges: List[int]) -> str:
+        for edge in edges:
+            self.bm.edges.remove(self.bm.edges[edge])
+        return "Edges removed"
 
-    # def neighbor_faces(self, vertices):
-    #     all_faces = []
-    #     for vertex in vertices:
-    #         faces = [f.index for f in self.bm.verts[vertex].link_faces]
-    #         all_faces.extend(faces)
-    #     return f"Neighbor faces: {all_faces}"
+    def neighbor_faces(self, vertices: List[int]) -> str:
+        all_faces = []
+        for vertex in vertices:
+            faces = [f.index for f in self.bm.verts[vertex].link_faces]
+            all_faces.extend(faces)
+        return f"Neighbor faces: {all_faces}"
 
-    # def loops(self, face_vertex_pairs):
-    #     found_loops = []
-    #     for face, vertex in face_vertex_pairs:
-    #         loop = next((l for l in self.bm.faces[face].loops if l.vert == self.bm.verts[vertex]), None)
-    #         if loop:
-    #             found_loops.append(loop)
-    #     return f"Loops found: {found_loops}"
+    def loops(self, face_vertex_pairs: List[Tuple[int, int]]) -> str:
+        found_loops = []
+        for face, vertex in face_vertex_pairs:
+            loop = next((l for l in self.bm.faces[face].loops if l.vert == self.bm.verts[vertex]), None)
+            if loop:
+                found_loops.append(loop)
+        return f"Loops found: {found_loops}"
 
-    # def add_vertex_attributes(self, attribute_definitions):
-    #     for attribute_definition in attribute_definitions:
-    #         self.bm.verts.layers.float.new(attribute_definition)
-    #     return f"Vertex attributes '{attribute_definitions}' added"
+    def add_vertex_attributes(self, attribute_definitions: List[str]) -> str:
+        for attribute_definition in attribute_definitions:
+            self.bm.verts.layers.float.new(attribute_definition)
+        return f"Vertex attributes '{attribute_definitions}' added"
 
-    # def add_edge_attributes(self, attribute_definitions):
-    #     for attribute_definition in attribute_definitions:
-    #         self.bm.edges.layers.float.new(attribute_definition)
-    #     return f"Edge attributes '{attribute_definitions}' added"
+    def add_edge_attributes(self, attribute_definitions: List[str]) -> str:
+        for attribute_definition in attribute_definitions:
+            self.bm.edges.layers.float.new(attribute_definition)
+        return f"Edge attributes '{attribute_definitions}' added"
 
-    # def add_face_attributes(self, attribute_definitions):
-    #     for attribute_definition in attribute_definitions:
-    #         self.bm.faces.layers.float.new(attribute_definition)
-    #     return f"Face attributes '{attribute_definitions}' added"
+    def add_face_attributes(self, attribute_definitions: List[str]) -> str:
+        for attribute_definition in attribute_definitions:
+            self.bm.faces.layers.float.new(attribute_definition)
+        return f"Face attributes '{attribute_definitions}' added"
 
 class RequestHandler(BaseHTTPRequestHandler):
 
-    def do_GET(self):
+    def do_GET(self) -> None:
         self.handle_request()
 
-    def do_PUT(self):
+    def do_PUT(self) -> None:
         length = int(self.headers['Content-Length'])
         data = self.rfile.read(length)
         request = json.loads(data)
         self.handle_request(request)
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         self.server.shutdown()
 
 
-    def handle_request(self, request=None):
+    def handle_request(self, request: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]]=None) -> None:
         try:
             if isinstance(request, list):  # Check if the request is a batch
                 responses = []
@@ -232,7 +233,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(bytes(json.dumps(response), 'utf8'))
 
 
-    def handle_single_request(self, request):
+    def handle_single_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
         method = request.get('method')  # Get method from request body
         params = request.get('params', [])
         id = request.get('id')
@@ -312,30 +313,30 @@ class RequestHandler(BaseHTTPRequestHandler):
                 response = self.success_response(result, id)
             else:
                 response = self.error_response("Insufficient parameters for 'add_faces'", id)
-        # elif method == 'find_edges':
-        #     result = batch_ops.find_edges(params[1:])  # Skip the first parameter (object name)
-        #     response = self.success_response(result, id)
-        # elif method == 'remove_edges':
-        #     result = batch_ops.remove_edges(params[1:])  # Skip the first parameter (object name)
-        #     response = self.success_response(result, id)
-        # elif method == 'neighbor_faces':
-        #     result = batch_ops.neighbor_faces(params[1:])  # Skip the first parameter (object name)
-        #     response = self.success_response(result, id)
-        # elif method == 'loops':
-        #     result = batch_ops.loops(params[1:])  # Skip the first parameter (object name)
-        #     response = self.success_response(result, id)
-        # elif method == 'add_vertex_attributes':
-        #     result = batch_ops.add_vertex_attributes(params[1:])  # Skip the first parameter (object name)
-        #     response = self.success_response(result, id)
-        # elif method == 'add_edge_attributes':
-        #     result = batch_ops.add_edge_attributes(params[1:])  # Skip the first parameter (object name)
-        #     response = self.success_response(result, id)
-        # elif method == 'add_face_attributes':
-        #     result = batch_ops.add_face_attributes(params[1:])  # Skip the first parameter (object name)
-        #     response = self.success_response(result, id)
-        # elif method == 'run_tests':
-        #     result = self.run_tests(*params)
-        #     response = self.success_response(result, id)
+        elif method == 'find_edges':
+            result = batch_ops.find_edges(params[1:])  # Skip the first parameter (object name)
+            response = self.success_response(result, id)
+        elif method == 'remove_edges':
+            result = batch_ops.remove_edges(params[1:])  # Skip the first parameter (object name)
+            response = self.success_response(result, id)
+        elif method == 'neighbor_faces':
+            result = batch_ops.neighbor_faces(params[1:])  # Skip the first parameter (object name)
+            response = self.success_response(result, id)
+        elif method == 'loops':
+            result = batch_ops.loops(params[1:])  # Skip the first parameter (object name)
+            response = self.success_response(result, id)
+        elif method == 'add_vertex_attributes':
+            result = batch_ops.add_vertex_attributes(params[1:])  # Skip the first parameter (object name)
+            response = self.success_response(result, id)
+        elif method == 'add_edge_attributes':
+            result = batch_ops.add_edge_attributes(params[1:])  # Skip the first parameter (object name)
+            response = self.success_response(result, id)
+        elif method == 'add_face_attributes':
+            result = batch_ops.add_face_attributes(params[1:])  # Skip the first parameter (object name)
+            response = self.success_response(result, id)
+        elif method == 'run_tests':
+            result = self.run_tests(*params)
+            response = self.success_response(result, id)
         elif method == 'shutdown':
             self.shutdown()
             response = self.success_response("Server is shutting down", id)
@@ -344,7 +345,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         return response
 
-    def import_gltf(self, gltf_path):
+    def import_gltf(self, gltf_path: str) -> str:
         import os
 
         if not os.path.isfile(gltf_path):
@@ -359,13 +360,13 @@ class RequestHandler(BaseHTTPRequestHandler):
         return "OK"
 
 
-    def success_response(self, result, id):
+    def success_response(self, result: Any, id: Optional[int]) -> Dict[str, Any]:
         return {
             "result": result,
             "id": id
         }
 
-    def error_response(self, code, message, id):
+    def error_response(self, code: int, message: str, id: Optional[int]) -> Dict[str, Any]:
         return {
             "error": {
                 "code": code,
@@ -374,10 +375,10 @@ class RequestHandler(BaseHTTPRequestHandler):
             "id": id
         }
 
-    def list_objects(self):
+    def list_objects(self) -> List[str]:
         return bpy.data.objects.keys()
                 
-    def get_3d_conventions(self):
+    def get_3d_conventions(self) -> Dict[str, Tuple[float, float, float, float]]:
         # Get the current 3D view space conventions
         view3d_space = next(space for space in bpy.context.screen.areas if space.type == 'VIEW_3D').spaces[0]
         view_rotation = view3d_space.region_3d.view_rotation
@@ -386,7 +387,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             "view_rotation": tuple(view_rotation)
         }
 
-    def delete_obj(self, obj_name):
+    def delete_obj(self, obj_name: str) -> str:
         # Check if the object exists in the scene.
         if obj_name in bpy.data.objects:
             # Get the object.
@@ -400,7 +401,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             # If the object does not exist, return a message indicating so.
             return f"Object {obj_name} does not exist"
 
-    def import_obj(self, node_path):
+    def import_obj(self, node_path: str) -> str:
         import os
 
         if node_path in bpy.data.objects:
@@ -414,11 +415,11 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         return "OK"
 
-def launch_server():
+def launch_server() -> None:
     server = HTTPServer((HOST, PORT), RequestHandler)
     server.serve_forever()
 
-def server_start():
+def server_start() -> None:
     try:
         print("Starting server...")
         t = threading.Thread(target=launch_server)
