@@ -1,3 +1,8 @@
+# Copyright (c) 2018-present. This file is part of V-Sekai https://v-sekai.org/.
+# SaracenOne & K. S. Ernest (Fire) Lee & Lyuma & MMMaellon & Contributors
+# generative_sidecar_api.ex
+# SPDX-License-Identifier: MIT
+
 defmodule GenerativeSidecarApi do
   @base_url "http://127.0.0.1:8000/"
   @headers [{"Content-Type", "application/json"}]

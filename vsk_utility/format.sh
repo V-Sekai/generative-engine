@@ -31,7 +31,7 @@ set -uo pipefail
 
 if [ $# -eq 0 ]; then
     # Loop through all code files tracked by Git.
-    files=$(git ls-files -- '*.gd' \
+    files=$(git ls-files -- '*.gd' '*.ex' '*.exs' \
                 ':!:.git/*' ':!:thirdparty/*' ':!:addons/vrm' ':!:addons/godot_state_charts' ':!:addons/xr_vignette' \
                 ':!:addons/unidot_importer' ':!:addons/Godot-MToon-Shader' ':!:addons/gut' ':!:addons/smoothing' \
                 ':!:.git/*' ':!:thirdparty/*' ':!:*/thirdparty/*' ':!:platform/android/java/lib/src/com/google/*' \
