@@ -9,9 +9,17 @@ defmodule GenerativeSidecar do
     opts = [strategy: :one_for_one, name: GenerativeSidecar.Supervisor]
     supervisor_pid = Supervisor.start_link(children, opts)
 
-    launch_blender()
+    Process.flag(:trap_exit, true)
+    {:ok, blender_pid} = launch_blender()
+
+    Process.monitor(blender_pid)
 
     supervisor_pid
+  end
+
+  def handle_info({:DOWN, _ref, :process, _pid, _reason}, state) do
+    IO.puts("Blender process has been stopped")
+    {:noreply, state}
   end
 
   def launch_blender do
@@ -21,6 +29,11 @@ defmodule GenerativeSidecar do
     end
 
     Task.Supervisor.start_child(GenerativeSidecar.TaskSupervisor, task_fn)
+  end
+
+  def terminate(_reason, _state) do
+    IO.puts("Stopping Blender process...")
+    System.cmd("pkill", ["-f", "blender"])
     :ok
   end
 end
