@@ -41,12 +41,62 @@ curl -X PUT \
 -d '[{"jsonrpc": "2.0", "method": "create_empty_mesh", "params": ["mesh_name", "object_name"], "id": 1}]' \
 http://127.0.0.1:8000
 
-# Add vertices and faces to the mesh
+# Shape 1
 curl -X PUT \
 -H "Content-Type: application/json" \
 -d '[ 
-    {"jsonrpc": "2.0", "method": "add_vertices", "params": ["object_name", "object_name", [[0,0,0], [1,0,0], [1,1,0], [0,1,0], [0,0,1], [1,0,1], [1,1,1], [0,1,1]]], "id": 1}, 
-    {"jsonrpc": "2.0", "method": "add_faces", "params": ["object_name", "object_name", [[0,1,5,4], [1,2,6,5], [2,3,7,6], [3,0,4,7], [0,1,2,3], [4,5,6,7]]], "id": 2} 
+    {"jsonrpc": "2.0", "method": "add_vertices", "params": ["object_name1","mesh_name0",  [[1,0,0], [2,0,0], [2,1,0], [1,1,0], [1,0,1], [2,0,1], [2,1,1], [1,1,1]]], "id": 1}, 
+    {"jsonrpc": "2.0", "method": "add_faces", "params": ["object_name1", "mesh_name0",[[0,1,5,4], [1,2,6,5], [2,3,7,6], [3,0,4,7], [0,1,2,3], [4,5,6,7]]], "id": 2} 
+]' \
+http://127.0.0.1:8000
+
+# Shape 2
+curl -X PUT \
+-H "Content-Type: application/json" \
+-d '[ 
+    {"jsonrpc": "2.0", "method": "add_vertices", "params": ["object_name2", "mesh_name1",[[1,0,0], [2,0,0], [2,1,0], [1,1,0], [1,0,1], [2,0,1], [2,1,1], [1,1,1]]], "id": 3}, 
+    {"jsonrpc": "2.0", "method": "add_faces", "params": ["object_name2", "mesh_name1",[[0,1,5,4], [1,2,6,5], [2,3,7,6], [3,0,4,7], [0,1,2,3], [4,5,6,7]]], "id": 4} 
+]' \
+http://127.0.0.1:8000
+
+# Shape 3
+curl -X PUT \
+-H "Content-Type: application/json" \
+-d '[ 
+    {"jsonrpc": "2.0", "method": "add_vertices", "params": ["object_name3", "mesh_name2",[[1,0,0], [2,0,0], [2,1,0], [1,1,0], [1,0,1], [2,0,1], [2,1,1], [1,1,1]]], "id": 5}, 
+    {"jsonrpc": "2.0", "method": "add_faces", "params": ["object_name3", "mesh_name2",[[0,1,5,4], [1,2,6,5], [2,3,7,6], [3,0,4,7], [0,1,2,3], [4,5,6,7]]], "id": 6} 
+]' \
+http://127.0.0.1:8000
+
+# Set translation for Shape 1
+curl -X PUT \
+-H "Content-Type: application/json" \
+-d '[ 
+    {"jsonrpc": "2.0", "method": "set_translation", "params": ["object_name1", [3, 0, 0]], "id": 7}
+]' \
+http://127.0.0.1:8000
+
+# Set translation for Shape 2
+curl -X PUT \
+-H "Content-Type: application/json" \
+-d '[ 
+    {"jsonrpc": "2.0", "method": "set_translation", "params": ["object_name2", [-3, 0, 0]], "id": 8}
+]' \
+http://127.0.0.1:8000
+
+# Set translation for Shape 3
+curl -X PUT \
+-H "Content-Type: application/json" \
+-d '[ 
+    {"jsonrpc": "2.0", "method": "set_translation", "params": ["object_name3", [0, 3, 0]], "id": 9}
+]' \
+http://127.0.0.1:8000
+
+# Set Global Transform
+curl -X PUT \
+-H "Content-Type: application/json" \
+-d '[ 
+    {"jsonrpc": "2.0", "method": "set_global_transform", "params": ["mesh_name0","object_name1", [[1,0,0], [0,1,0], [0,0,1], [0,0,0]]], "id": 8} 
 ]' \
 http://127.0.0.1:8000
 

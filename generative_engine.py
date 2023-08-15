@@ -85,6 +85,30 @@ class BatchMeshOperations:
         self.bm.to_mesh(self.mesh)
         return "Faces added"
 
+    def set_translation(self, object_name, translation):
+        if object_name in bpy.data.objects:
+            obj = bpy.data.objects[object_name]
+            obj.location = translation
+            return f"Translation set for {object_name}"
+        else:
+            return f"Object {object_name} does not exist"
+
+    def set_rotation(self, object_name, rotation):
+        if object_name in bpy.data.objects:
+            obj = bpy.data.objects[object_name]
+            obj.rotation_euler = rotation
+            return f"Rotation set for {object_name}"
+        else:
+            return f"Object {object_name} does not exist"
+
+    def set_scale(self, object_name, scale):
+        if object_name in bpy.data.objects:
+            obj = bpy.data.objects[object_name]
+            obj.scale = scale
+            return f"Scale set for {object_name}"
+        else:
+            return f"Object {object_name} does not exist"
+
     # def find_edges(self, edges):
     #     found_edges = []
     #     for v1, v2 in edges:
@@ -202,6 +226,27 @@ class RequestHandler(BaseHTTPRequestHandler):
         elif method == 'delete_obj':
             result = self.delete_obj(*params)
             response = self.success_response(result, id)
+        elif method == 'set_translation':
+            if 'params' in request and len(request['params']) >= 2:
+                object_name, translation = request['params']
+                result = batch_ops.set_translation(object_name, translation)
+                response = self.success_response(result, id)
+            else:
+                response = self.error_response("Insufficient parameters for 'set_translation'", id)
+        elif method == 'set_rotation':
+            if 'params' in request and len(request['params']) >= 2:
+                object_name, rotation = request['params']
+                result = batch_ops.set_rotation(object_name, rotation)
+                response = self.success_response(result, id)
+            else:
+                response = self.error_response("Insufficient parameters for 'set_rotation'", id)
+        elif method == 'set_scale':
+            if 'params' in request and len(request['params']) >= 2:
+                object_name, scale = request['params']
+                result = batch_ops.set_scale(object_name, scale)
+                response = self.success_response(result, id)
+            else:
+                response = self.error_response("Insufficient parameters for 'set_scale'", id)
         elif method == 'create_empty_mesh':
             if 'params' in request and len(request['params']) >= 2:
                 mesh_name = request['params'][0]
@@ -217,7 +262,6 @@ class RequestHandler(BaseHTTPRequestHandler):
                 response = self.success_response(result, id)
             else:
                 response = self.error_response("Insufficient parameters for 'add_vertices'", id)
-
         elif method == 'add_faces':
             if 'params' in request and len(request['params']) >= 3:
                 object_name, mesh_name, faces = request['params']
@@ -225,7 +269,21 @@ class RequestHandler(BaseHTTPRequestHandler):
                 response = self.success_response(result, id)
             else:
                 response = self.error_response("Insufficient parameters for 'add_faces'", id)
+        elif method == 'set_local_transform':
+            if 'params' in request and len(request['params']) >= 2:
+                object_name, transform_matrix = request['params']
+                result = batch_ops.set_local_transform(object_name, transform_matrix)
+                response = self.success_response(result, id)
+            else:
+                response = self.error_response("Insufficient parameters for 'set_local_transform'", id)
 
+        elif method == 'set_global_transform':
+            if 'params' in request and len(request['params']) >= 2:
+                object_name, transform_matrix = request['params']
+                result = batch_ops.set_global_transform(object_name, transform_matrix)
+                response = self.success_response(result, id)
+            else:
+                response = self.error_response("Insufficient parameters for 'set_global_transform'", id)
         # elif method == 'find_edges':
         #     result = batch_ops.find_edges(params[1:])  # Skip the first parameter (object name)
         #     response = self.success_response(result, id)
