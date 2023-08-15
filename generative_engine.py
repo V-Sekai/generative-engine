@@ -244,102 +244,34 @@ class RequestHandler(BaseHTTPRequestHandler):
             # Assuming the first parameter is always the object name
             object_name = params[0]
             batch_ops = BatchMeshOperations(object_name)
+        method_mapping = {
+            'list_objects': lambda params: self.list_objects(*params),
+            'import_obj': lambda params: self.import_obj(*params),
+            'import_gltf': lambda params: self.import_gltf(*params),
+            'export_gltf': lambda params: export_gltf(*params),
+            'get_3d_conventions': lambda params: self.get_3d_conventions(*params),
+            'delete_obj': lambda params: self.delete_obj(*params),
+            'set_parent': lambda params: set_parent(*params) if len(params) >= 2 else self.error_response("Insufficient parameters for 'set_parent'"),
+            'set_translation': lambda params: batch_ops.set_translation(*params) if len(params) >= 2 else self.error_response("Insufficient parameters for 'set_translation'"),
+            'set_rotation': lambda params: batch_ops.set_rotation(*params) if len(params) >= 2 else self.error_response("Insufficient parameters for 'set_rotation'"),
+            'set_scale': lambda params: batch_ops.set_scale(*params) if len(params) >= 2 else self.error_response("Insufficient parameters for 'set_scale'"),
+            'create_empty_mesh': lambda params: batch_ops.create_empty_mesh(*params) if len(params) >= 2 else self.error_response("Insufficient parameters for 'create_empty_mesh'"),
+            'add_vertices': lambda params: batch_ops.add_vertices(*params) if len(params) >= 3 else self.error_response("Insufficient parameters for 'add_vertices'"),
+            'add_faces': lambda params: batch_ops.add_faces(*params) if len(params) >= 3 else self.error_response("Insufficient parameters for 'add_faces'"),
+            'find_edges': lambda params: batch_ops.find_edges(params[1:]),
+            'remove_edges': lambda params: batch_ops.remove_edges(params[1:]),
+            'neighbor_faces': lambda params: batch_ops.neighbor_faces(params[1:]),
+            'loops': lambda params: batch_ops.loops(params[1:]),
+            'add_vertex_attributes': lambda params: batch_ops.add_vertex_attributes(params[1:]),
+            'add_edge_attributes': lambda params: batch_ops.add_edge_attributes(params[1:]),
+            'add_face_attributes': lambda params: batch_ops.add_face_attributes(params[1:]),
+            'run_tests': lambda params: self.run_tests(*params),
+            'shutdown': lambda params: self.shutdown()
+        }
 
-        if method == 'list_objects':
-            result = self.list_objects(*params)
+        if method in method_mapping:
+            result = method_mapping[method](params)
             response = self.success_response(result, id)
-        elif method == 'import_obj':
-            result = self.import_obj(*params)
-            response = self.success_response(result, id)
-        elif method == 'import_gltf':
-            result = self.import_gltf(*params)
-            response = self.success_response(result, id)
-        elif method == 'export_gltf':
-            result = export_gltf(*params)
-            response = self.success_response(result, id)
-        elif method == 'get_3d_conventions':
-            result = self.get_3d_conventions(*params)
-            response = self.success_response(result, id)
-        elif method == 'delete_obj':
-            result = self.delete_obj(*params)
-            response = self.success_response(result, id)
-        elif method == 'set_parent':
-            if 'params' in request and len(request['params']) >= 2:
-                child_name, parent_name = request['params']
-                result = set_parent(child_name, parent_name)
-                response = self.success_response(result, id)
-            else:
-                response = self.error_response("Insufficient parameters for 'set_parent'", id)
-        elif method == 'set_translation':
-            if 'params' in request and len(request['params']) >= 2:
-                object_name, translation = request['params']
-                result = batch_ops.set_translation(object_name, translation)
-                response = self.success_response(result, id)
-            else:
-                response = self.error_response("Insufficient parameters for 'set_translation'", id)
-        elif method == 'set_rotation':
-            if 'params' in request and len(request['params']) >= 2:
-                object_name, rotation = request['params']
-                result = batch_ops.set_rotation(object_name, rotation)
-                response = self.success_response(result, id)
-            else:
-                response = self.error_response("Insufficient parameters for 'set_rotation'", id)
-        elif method == 'set_scale':
-            if 'params' in request and len(request['params']) >= 2:
-                object_name, scale = request['params']
-                result = batch_ops.set_scale(object_name, scale)
-                response = self.success_response(result, id)
-            else:
-                response = self.error_response("Insufficient parameters for 'set_scale'", id)
-        elif method == 'create_empty_mesh':
-            if 'params' in request and len(request['params']) >= 2:
-                mesh_name = request['params'][0]
-                object_name = request['params'][1]
-                result = batch_ops.create_empty_mesh(mesh_name, object_name)
-                response = self.success_response(result, id)
-            else:
-                response = self.error_response("Insufficient parameters for 'create_empty_mesh'", id)
-        elif method == 'add_vertices':
-            if 'params' in request and len(request['params']) >= 3:
-                object_name, mesh_name, vertices = request['params']
-                result = batch_ops.add_vertices(object_name, mesh_name, vertices)
-                response = self.success_response(result, id)
-            else:
-                response = self.error_response("Insufficient parameters for 'add_vertices'", id)
-        elif method == 'add_faces':
-            if 'params' in request and len(request['params']) >= 3:
-                object_name, mesh_name, faces = request['params']
-                result = batch_ops.add_faces(object_name, mesh_name, faces)
-                response = self.success_response(result, id)
-            else:
-                response = self.error_response("Insufficient parameters for 'add_faces'", id)
-        elif method == 'find_edges':
-            result = batch_ops.find_edges(params[1:])  # Skip the first parameter (object name)
-            response = self.success_response(result, id)
-        elif method == 'remove_edges':
-            result = batch_ops.remove_edges(params[1:])  # Skip the first parameter (object name)
-            response = self.success_response(result, id)
-        elif method == 'neighbor_faces':
-            result = batch_ops.neighbor_faces(params[1:])  # Skip the first parameter (object name)
-            response = self.success_response(result, id)
-        elif method == 'loops':
-            result = batch_ops.loops(params[1:])  # Skip the first parameter (object name)
-            response = self.success_response(result, id)
-        elif method == 'add_vertex_attributes':
-            result = batch_ops.add_vertex_attributes(params[1:])  # Skip the first parameter (object name)
-            response = self.success_response(result, id)
-        elif method == 'add_edge_attributes':
-            result = batch_ops.add_edge_attributes(params[1:])  # Skip the first parameter (object name)
-            response = self.success_response(result, id)
-        elif method == 'add_face_attributes':
-            result = batch_ops.add_face_attributes(params[1:])  # Skip the first parameter (object name)
-            response = self.success_response(result, id)
-        elif method == 'run_tests':
-            result = self.run_tests(*params)
-            response = self.success_response(result, id)
-        elif method == 'shutdown':
-            self.shutdown()
-            response = self.success_response("Server is shutting down", id)
         else:
             response = self.error_response(-32601, f"Method not found: {method}", id)
 
