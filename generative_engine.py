@@ -47,6 +47,87 @@ def _export_gltf_main_thread(obj_name, gltf_path):
     except Exception as e:
         print(f"Failed to export {obj_name} to {gltf_path}: {e}")
 
+class BatchMeshOperations:
+    def __init__(self, object_name):
+        if object_name in bpy.data.objects:
+            self.obj = bpy.data.objects[object_name]
+        else:
+            # Create a new object if it doesn't exist
+            mesh = bpy.data.meshes.new(object_name)
+            self.obj = bpy.data.objects.new(object_name, mesh)
+            bpy.context.collection.objects.link(self.obj)
+
+        self.mesh = self.obj.data
+        self.bm = bmesh.new()
+        self.bm.from_mesh(self.mesh)
+
+    def create_empty_mesh(self, mesh_name, object_name):
+        self.mesh = bpy.data.meshes.new(mesh_name)
+        self.obj = bpy.data.objects.new(object_name, self.mesh)
+        bpy.context.collection.objects.link(self.obj)
+        return self.obj.name
+
+    def add_vertices(self, object_name, mesh_name, vertices):
+        self.__init__(object_name)
+        for x, y, z in vertices:
+            self.bm.verts.new((x, y, z))
+        self.bm.to_mesh(self.mesh)
+        return "Vertices added"
+
+    def add_faces(self, object_name, mesh_name, faces):
+        self.__init__(object_name)
+        self.bm.verts.ensure_lookup_table()  # Update the internal index table
+        for vertices in faces:
+            if all(isinstance(i, int) for i in vertices):
+                self.bm.faces.new([self.bm.verts[i] for i in vertices])
+            else:
+                raise ValueError("All elements in 'vertices' should be integers.")
+        self.bm.to_mesh(self.mesh)
+        return "Faces added"
+
+    # def find_edges(self, edges):
+    #     found_edges = []
+    #     for v1, v2 in edges:
+    #         edge = self.bm.edges.get((self.bm.verts[v1], self.bm.verts[v2]))
+    #         if edge:
+    #             found_edges.append(edge)
+    #     return f"Edges found: {found_edges}"
+
+    # def remove_edges(self, edges):
+    #     for edge in edges:
+    #         self.bm.edges.remove(self.bm.edges[edge])
+    #     return "Edges removed"
+
+    # def neighbor_faces(self, vertices):
+    #     all_faces = []
+    #     for vertex in vertices:
+    #         faces = [f.index for f in self.bm.verts[vertex].link_faces]
+    #         all_faces.extend(faces)
+    #     return f"Neighbor faces: {all_faces}"
+
+    # def loops(self, face_vertex_pairs):
+    #     found_loops = []
+    #     for face, vertex in face_vertex_pairs:
+    #         loop = next((l for l in self.bm.faces[face].loops if l.vert == self.bm.verts[vertex]), None)
+    #         if loop:
+    #             found_loops.append(loop)
+    #     return f"Loops found: {found_loops}"
+
+    # def add_vertex_attributes(self, attribute_definitions):
+    #     for attribute_definition in attribute_definitions:
+    #         self.bm.verts.layers.float.new(attribute_definition)
+    #     return f"Vertex attributes '{attribute_definitions}' added"
+
+    # def add_edge_attributes(self, attribute_definitions):
+    #     for attribute_definition in attribute_definitions:
+    #         self.bm.edges.layers.float.new(attribute_definition)
+    #     return f"Edge attributes '{attribute_definitions}' added"
+
+    # def add_face_attributes(self, attribute_definitions):
+    #     for attribute_definition in attribute_definitions:
+    #         self.bm.faces.layers.float.new(attribute_definition)
+    #     return f"Face attributes '{attribute_definitions}' added"
+
 class RequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
@@ -90,10 +171,18 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(bytes(json.dumps(response), 'utf8'))
 
+
     def handle_single_request(self, request):
         method = request.get('method')  # Get method from request body
         params = request.get('params', [])
         id = request.get('id')
+
+        object_name = None
+        batch_ops = None
+        if params:
+            # Assuming the first parameter is always the object name
+            object_name = params[0]
+            batch_ops = BatchMeshOperations(object_name)
 
         if method == 'list_objects':
             result = self.list_objects(*params)
@@ -113,9 +202,54 @@ class RequestHandler(BaseHTTPRequestHandler):
         elif method == 'delete_obj':
             result = self.delete_obj(*params)
             response = self.success_response(result, id)
-        elif method == 'create_mesh_from_vertices':
-            result = self.create_mesh_from_vertices(*params)
-            response = self.success_response(result, id) 
+        elif method == 'create_empty_mesh':
+            if 'params' in request and len(request['params']) >= 2:
+                mesh_name = request['params'][0]
+                object_name = request['params'][1]
+                result = batch_ops.create_empty_mesh(mesh_name, object_name)
+                response = self.success_response(result, id)
+            else:
+                response = self.error_response("Insufficient parameters for 'create_empty_mesh'", id)
+        elif method == 'add_vertices':
+            if 'params' in request and len(request['params']) >= 3:
+                object_name, mesh_name, vertices = request['params']
+                result = batch_ops.add_vertices(object_name, mesh_name, vertices)
+                response = self.success_response(result, id)
+            else:
+                response = self.error_response("Insufficient parameters for 'add_vertices'", id)
+
+        elif method == 'add_faces':
+            if 'params' in request and len(request['params']) >= 3:
+                object_name, mesh_name, faces = request['params']
+                result = batch_ops.add_faces(object_name, mesh_name, faces)
+                response = self.success_response(result, id)
+            else:
+                response = self.error_response("Insufficient parameters for 'add_faces'", id)
+
+        # elif method == 'find_edges':
+        #     result = batch_ops.find_edges(params[1:])  # Skip the first parameter (object name)
+        #     response = self.success_response(result, id)
+        # elif method == 'remove_edges':
+        #     result = batch_ops.remove_edges(params[1:])  # Skip the first parameter (object name)
+        #     response = self.success_response(result, id)
+        # elif method == 'neighbor_faces':
+        #     result = batch_ops.neighbor_faces(params[1:])  # Skip the first parameter (object name)
+        #     response = self.success_response(result, id)
+        # elif method == 'loops':
+        #     result = batch_ops.loops(params[1:])  # Skip the first parameter (object name)
+        #     response = self.success_response(result, id)
+        # elif method == 'add_vertex_attributes':
+        #     result = batch_ops.add_vertex_attributes(params[1:])  # Skip the first parameter (object name)
+        #     response = self.success_response(result, id)
+        # elif method == 'add_edge_attributes':
+        #     result = batch_ops.add_edge_attributes(params[1:])  # Skip the first parameter (object name)
+        #     response = self.success_response(result, id)
+        # elif method == 'add_face_attributes':
+        #     result = batch_ops.add_face_attributes(params[1:])  # Skip the first parameter (object name)
+        #     response = self.success_response(result, id)
+        # elif method == 'run_tests':
+        #     result = self.run_tests(*params)
+        #     response = self.success_response(result, id)
         elif method == 'shutdown':
             self.shutdown()
             response = self.success_response("Server is shutting down", id)
@@ -138,24 +272,6 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         return "OK"
 
-
-    def create_mesh_from_vertices(self, vertex_list):
-        # Create a new mesh object and link it to the scene
-        mesh = bpy.data.meshes.new(name="New_Mesh")
-        obj = bpy.data.objects.new("New_Object", mesh)
-        bpy.context.collection.objects.link(obj)
-
-        # Create a bmesh object and add vertices to it
-        bm = bmesh.new()
-        for v in vertex_list:
-            coords = (v['x'], v['y'], v['z'])  # Extract coordinates from the dictionary
-            bm.verts.new(coords)  # Add a new vertex
-
-        # Update the bmesh to the mesh
-        bm.to_mesh(mesh)
-        bm.free()
-
-        return "Mesh created from vertices"
 
     def success_response(self, result, id):
         return {
