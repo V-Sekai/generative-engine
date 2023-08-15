@@ -5,8 +5,8 @@ defmodule APITester do
   def run_tests do
     list_objects()
     get_3d_conventions()
-    # import_obj("/Users/ernest.lee/Downloads/untitled_rem_p0_10_quadrangulation.obj")
-    # delete_obj("untitled_rem_p0_10_quadrangulation")
+    import_obj("/Users/ernest.lee/Downloads/untitled_rem_p0_10_quadrangulation.obj")
+    delete_obj("untitled_rem_p0_10_quadrangulation")
     list_objects()
     batch_request()
     batch_mesh()
@@ -14,8 +14,8 @@ defmodule APITester do
     set_translation("object_name1", [2, 0, 0])
     set_parent("object_name2", "object_name1")
     set_global_transform("mesh_name0","object_name1", [[1,0,0], [0,1,0], [0,0,1], [0,0,0]])
-    export_gltf("New_Object", "C:/Users/ernes/Desktop/generative_engine/file.gltf")
-    # import_gltf("C:/Users/ernes/Desktop/generative_engine/file.gltf")
+    export_gltf("New_Object", "C:/Users/ernes/Desktop/generative_sidecar/file.gltf")
+    import_gltf("C:/Users/ernes/Desktop/generative_sidecar/file.gltf")
   end
 
   def batch_mesh do

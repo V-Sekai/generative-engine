@@ -1,18 +1,26 @@
 defmodule GenerativeSidecar do
-  @moduledoc """
-  Documentation for `GenerativeSidecar`.
-  """
+  use Application
 
-  @doc """
-  Hello world.
+  def start(_type, _args) do
+    children = [
+      {Task.Supervisor, name: GenerativeSidecar.TaskSupervisor}
+    ]
 
-  ## Examples
+    opts = [strategy: :one_for_one, name: GenerativeSidecar.Supervisor]
+    supervisor_pid = Supervisor.start_link(children, opts)
 
-      iex> GenerativeSidecar.hello()
-      :world
+    launch_blender()
 
-  """
-  def hello do
-    :world
+    supervisor_pid
+  end
+
+  def launch_blender do
+    task_fn = fn ->
+      {result, _} = System.cmd("blender", ["-P", "generative_engine.py"])
+      IO.puts(result)
+    end
+
+    Task.Supervisor.start_child(GenerativeSidecar.TaskSupervisor, task_fn)
+    :ok
   end
 end
